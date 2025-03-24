@@ -1,0 +1,6 @@
+# Ambiente virtual
+venv/
+
+# Arquivos gerados pelo projeto
+dados_agricultura.csv
+*.png
