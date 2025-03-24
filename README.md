@@ -130,7 +130,7 @@ O script em R realiza as seguintes análises:
 
 ## Autores
 
-Desenvolvido pelo grupo [PREENCHEEEEER]
+Desenvolvido pelo grupo: Juliano, Daniel, Larrisa, Davi e Brenda da turma: 1TIAOB ( Turma B )
 
 ## Licença
 
