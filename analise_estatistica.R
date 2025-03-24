@@ -1,9 +1,5 @@
-# Análise Estatística - Projeto Agricultura Digital
-# FarmTech Solutions
-
-# Carregar pacotes necessários
-if (!require("tidyverse")) install.packages("tidyverse")
-library(tidyverse)
+# Análise Estatística (Versão Simplificada) - Projeto Agricultura Digital
+# FarmTech Solutions - Usando apenas R base (sem tidyverse)
 
 # Funções auxiliares para exibição de resultados
 imprimir_separador <- function() {
@@ -45,17 +41,42 @@ analise_descritiva <- function(dados) {
   
   # Estatísticas por cultura
   cat("\n3. Estatísticas da área por cultura:\n")
-  por_cultura <- dados %>%
-    group_by(cultura) %>%
-    summarise(
-      media_area_ha = mean(area_ha),
-      mediana_area_ha = median(area_ha),
-      min_area_ha = min(area_ha),
-      max_area_ha = max(area_ha),
-      desvio_padrao = sd(area_ha),
-      total_area_ha = sum(area_ha)
-    )
   
+  # Função para calcular estatísticas por grupo
+  estatisticas_por_grupo <- function(dados, grupo) {
+    culturas_unicas <- unique(dados[[grupo]])
+    resultado <- data.frame(
+      cultura = character(),
+      media_area_ha = numeric(),
+      mediana_area_ha = numeric(),
+      min_area_ha = numeric(),
+      max_area_ha = numeric(), 
+      desvio_padrao = numeric(),
+      total_area_ha = numeric(),
+      stringsAsFactors = FALSE
+    )
+    
+    for (cultura in culturas_unicas) {
+      subset_dados <- dados[dados[[grupo]] == cultura, ]
+      
+      row <- data.frame(
+        cultura = cultura,
+        media_area_ha = mean(subset_dados$area_ha),
+        mediana_area_ha = median(subset_dados$area_ha),
+        min_area_ha = min(subset_dados$area_ha),
+        max_area_ha = max(subset_dados$area_ha),
+        desvio_padrao = sd(subset_dados$area_ha),
+        total_area_ha = sum(subset_dados$area_ha),
+        stringsAsFactors = FALSE
+      )
+      
+      resultado <- rbind(resultado, row)
+    }
+    
+    return(resultado)
+  }
+  
+  por_cultura <- estatisticas_por_grupo(dados, "cultura")
   print(por_cultura)
   imprimir_separador()
 }
@@ -71,11 +92,11 @@ analise_insumos <- function(dados) {
   
   # Total de insumos
   cat("\n1. Total de cada insumo necessário:\n")
-  totais_insumos <- dados %>%
-    summarise(across(all_of(colunas_insumos), sum))
+  totais_insumos <- sapply(dados[, colunas_insumos], sum)
   
-  for (insumo in colunas_insumos) {
-    cat(insumo, ":", totais_insumos[[insumo]], "kg\n")
+  for (i in 1:length(colunas_insumos)) {
+    insumo <- colunas_insumos[i]
+    cat(insumo, ":", totais_insumos[i], "kg\n")
   }
   
   # Insumos por hectare (média)
@@ -83,9 +104,10 @@ analise_insumos <- function(dados) {
   
   total_area <- sum(dados$area_ha)
   
-  for (insumo in colunas_insumos) {
+  for (i in 1:length(colunas_insumos)) {
+    insumo <- colunas_insumos[i]
     if (total_area > 0) {
-      media_por_ha <- totais_insumos[[insumo]] / total_area
+      media_por_ha <- totais_insumos[i] / total_area
       cat(insumo, ":", round(media_por_ha, 2), "kg/ha\n")
     }
   }
@@ -106,62 +128,33 @@ analise_irrigacao <- function(dados) {
   
   # Irrigação por cultura
   cat("\n2. Irrigação média por cultura:\n")
-  irrigacao_cultura <- dados %>%
-    group_by(cultura) %>%
-    summarise(
-      media_irrigacao = mean(irrigacao),
-      total_irrigacao = sum(irrigacao),
-      area_total_ha = sum(area_ha),
-      irrigacao_por_ha = sum(irrigacao) / sum(area_ha)
+  
+  culturas_unicas <- unique(dados$cultura)
+  irrigacao_cultura <- data.frame(
+    cultura = character(),
+    media_irrigacao = numeric(),
+    total_irrigacao = numeric(),
+    area_total_ha = numeric(),
+    irrigacao_por_ha = numeric(),
+    stringsAsFactors = FALSE
+  )
+  
+  for (cultura in culturas_unicas) {
+    subset_dados <- dados[dados$cultura == cultura, ]
+    
+    row <- data.frame(
+      cultura = cultura,
+      media_irrigacao = mean(subset_dados$irrigacao),
+      total_irrigacao = sum(subset_dados$irrigacao),
+      area_total_ha = sum(subset_dados$area_ha),
+      irrigacao_por_ha = sum(subset_dados$irrigacao) / sum(subset_dados$area_ha),
+      stringsAsFactors = FALSE
     )
+    
+    irrigacao_cultura <- rbind(irrigacao_cultura, row)
+  }
   
   print(irrigacao_cultura)
-  imprimir_separador()
-}
-
-# Visualizações
-criar_visualizacoes <- function(dados) {
-  cat("\nCRIANDO VISUALIZAÇÕES\n")
-  imprimir_separador()
-  
-  cat("\nAs visualizações foram salvas na pasta atual:\n")
-  
-  # 1. Gráfico de barras - Área por cultura
-  p1 <- ggplot(dados, aes(x = cultura, y = area_ha, fill = cultura)) +
-    geom_bar(stat = "identity") +
-    theme_minimal() +
-    labs(title = "Área Total por Cultura (ha)",
-         x = "Cultura",
-         y = "Área (hectares)")
-  
-  # Salvar o gráfico
-  ggsave("area_por_cultura.png", p1, width = 8, height = 6)
-  cat("- area_por_cultura.png\n")
-  
-  # 2. Gráfico de dispersão - Área vs Irrigação
-  p2 <- ggplot(dados, aes(x = area_ha, y = irrigacao, color = cultura)) +
-    geom_point(size = 3) +
-    theme_minimal() +
-    labs(title = "Relação entre Área e Irrigação",
-         x = "Área (hectares)",
-         y = "Irrigação (mm/dia)")
-  
-  # Salvar o gráfico
-  ggsave("area_vs_irrigacao.png", p2, width = 8, height = 6)
-  cat("- area_vs_irrigacao.png\n")
-  
-  # 3. Boxplot - Distribuição de áreas por cultura
-  p3 <- ggplot(dados, aes(x = cultura, y = area_ha, fill = cultura)) +
-    geom_boxplot() +
-    theme_minimal() +
-    labs(title = "Distribuição de Áreas por Cultura",
-         x = "Cultura",
-         y = "Área (hectares)")
-  
-  # Salvar o gráfico
-  ggsave("distribuicao_areas.png", p3, width = 8, height = 6)
-  cat("- distribuicao_areas.png\n")
-  
   imprimir_separador()
 }
 
@@ -180,9 +173,6 @@ main <- function() {
     analise_descritiva(dados)
     analise_insumos(dados)
     analise_irrigacao(dados)
-    
-    # Criar visualizações
-    criar_visualizacoes(dados)
     
     cat("\nAnálise estatística concluída com sucesso!\n")
     
